@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>憫農與午餐感恩朗讀平台</title>
+    <!-- Tailwind CSS for modern responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for friendly rounded text -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome for beautiful UI icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', 'Inter', sans-serif;
+            background-color: #fcf8f2;
+        }
+        /* Custom scrollbar for friendly look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1ebd9;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e2af53;
+            border-radius: 10px;
+        }
+        /* Pulse animation for reading highlights */
+        @keyframes pulse-highlight {
+            0%, 100% { background-color: rgba(254, 240, 138, 0.4); border-color: #eab308; }
+            50% { background-color: rgba(254, 240, 138, 0.7); border-color: #ca8a04; }
+        }
+        .active-sentence {
+            animation: pulse-highlight 2s infinite;
+            transform: scale(1.02);
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden text-slate-800">
+
+    <!-- Decorative background elements -->
+    <div class="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-[#f7e8cf] to-transparent -z-10 opacity-70"></div>
+    
+    <header class="w-full max-w-6xl mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="bg-amber-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20 text-2xl">
+                <i class="fa-solid fa-seedling"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-black text-amber-800 tracking-wide">小小農夫感恩朗讀亭</h1>
+                <p class="text-xs md:text-sm text-amber-700/80 font-bold">珍惜盤中餐，心懷感恩好習慣</p>
+            </div>
+        </div>
+        
+        <!-- Toggle Menu & API Options -->
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Mode buttons -->
+            <button id="btn-poem" onclick="switchMode('poem')" class="px-5 py-2.5 rounded-full font-bold shadow-md transition-all duration-300 transform hover:-translate-y-0.5 bg-amber-500 text-white border-2 border-amber-600">
+                <i class="fa-solid fa-feather mr-1.5"></i> 《憫農詩》
+            </button>
+            <button id="btn-gratitude" onclick="switchMode('gratitude')" class="px-5 py-2.5 rounded-full font-bold shadow-md transition-all duration-300 transform hover:-translate-y-0.5 bg-white text-amber-800 hover:bg-amber-100/50 border-2 border-amber-200">
+                <i class="fa-solid fa-utensils mr-1.5"></i> 午餐感謝詞
+            </button>
+            <!-- API Status Indicator -->
+            <button id="btn-api-config" onclick="toggleApiModal()" class="w-10 h-10 rounded-full bg-white border border-amber-200 text-amber-600 hover:bg-amber-50 flex items-center justify-center shadow" title="AI 語音設定">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow w-full max-w-6xl mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Content Presentation and Interaction (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col justify-between bg-white rounded-3xl p-6 shadow-xl shadow-amber-900/5 border-2 border-amber-100 relative overflow-hidden">
+            <!-- Mascot Decoration -->
+            <div class="absolute right-3 top-3 w-16 h-16 pointer-events-none opacity-30 sm:opacity-100 flex justify-center items-center">
+                <span id="mascot-face" class="text-4xl filter drop-shadow">🌾</span>
+            </div>
+
+            <!-- Header Info -->
+            <div class="mb-4">
+                <span class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider" id="content-tag">唐詩三百首</span>
+                <h2 class="text-3xl font-black text-slate-800 mt-2" id="main-title">憫農詩</h2>
+                <p class="text-sm text-slate-500 mt-1" id="main-author">作者：李紳</p>
+            </div>
+
+            <!-- Main Reading Canvas (Big words, easy to touch) -->
+            <div id="reading-lines-container" class="space-y-4 my-4 flex-grow flex flex-col justify-center">
+                <!-- Sentences will be dynamically injected here -->
+            </div>
+
+            <!-- Playback Control Panel -->
+            <div class="bg-amber-50/70 border border-amber-100 rounded-2xl p-4 mt-4">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <!-- Speech Voice Selection / Info -->
+                    <div class="flex items-center gap-2 text-sm text-amber-900/80">
+                        <i class="fa-solid fa-volume-high text-amber-500"></i>
+                        <span id="voice-indicator">正在加載語音導讀...</span>
+                    </div>
+
+                    <!-- Main Audio Buttons -->
+                    <div class="flex items-center gap-3">
+                        <button id="btn-read-all" onclick="playFullText()" class="px-6 py-3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all">
+                            <i id="icon-read-all" class="fa-solid fa-play"></i>
+                            <span id="label-read-all">整篇朗讀</span>
+                        </button>
+                        <button id="btn-stop-reading" onclick="stopAllAudio()" class="px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl active:scale-95 transition-all" title="停止播放">
+                            <i class="fa-solid fa-stop"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Speed and Helper Toggles -->
+                <div class="flex flex-wrap justify-between items-center mt-3 pt-3 border-t border-amber-200/50 gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-amber-800">輔助標記：</span>
+                        <button onclick="togglePinyin()" id="btn-pinyin-toggle" class="px-3 py-1 text-xs font-bold rounded-lg border border-amber-300 text-amber-800 bg-amber-100 hover:bg-amber-200">
+                            注音/拼音
+                        </button>
+                        <button onclick="toggleExplainMode()" id="btn-explain-toggle" class="px-3 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50">
+                            詳細解釋
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-amber-800">朗讀速度：</span>
+                        <select id="select-speed" class="text-xs bg-white border border-amber-200 rounded px-2 py-1 text-amber-900 focus:outline-none">
+                            <option value="0.75">緩慢跟讀 (0.75x)</option>
+                            <option value="1.0" selected>標準教學 (1.0x)</option>
+                            <option value="1.25">快速節奏 (1.25x)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Column: Student Recitation Recorder & Interaction (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col justify-between gap-6">
+            
+            <!-- Student Recorder Card -->
+            <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl p-6 shadow-xl border-2 border-emerald-100 flex flex-col justify-between h-1/2 min-h-[260px]">
+                <div>
+                    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">練習小舞臺</span>
+                    <h3 class="text-xl font-extrabold text-emerald-950 mt-2">小小播音員，換你試試看！</h3>
+                    <p class="text-xs text-emerald-800/80 mt-1">播放上方AI老師的範本後，自己試著錄音並播放，聽聽看是不是讀得很棒吧！</p>
+                </div>
+
+                <!-- Live waveform visualization during recording -->
+                <div class="my-4 bg-emerald-950/5 rounded-2xl h-16 flex items-center justify-center overflow-hidden relative border border-emerald-200">
+                    <canvas id="voice-wave" class="w-full h-full absolute inset-0"></canvas>
+                    <div id="mic-prompt" class="text-emerald-800/60 text-xs font-medium z-10 flex items-center gap-1.5">
+                        <i class="fa-solid fa-microphone"></i>
+                        <span>點擊下方按鈕開始跟著唸</span>
+                    </div>
+                </div>
+
+                <!-- Recorder Controls -->
+                <div class="flex items-center justify-between bg-white p-3 rounded-2xl border border-emerald-100 shadow-sm">
+                    <div class="flex items-center gap-2.5">
+                        <button id="btn-record" onclick="toggleRecording()" class="w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-500/20 active:scale-95 transition-all">
+                            <i id="icon-record" class="fa-solid fa-microphone text-lg"></i>
+                        </button>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase" id="record-status-label">準備就緒</p>
+                            <p class="text-sm font-black text-slate-800" id="record-timer">00:00</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button id="btn-play-recording" onclick="playStudentRecording()" disabled class="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs flex items-center gap-1 transition-all">
+                            <i class="fa-solid fa-play"></i> 播放我的聲音
+                        </button>
+                        <button id="btn-save-trophy" onclick="awardStar()" disabled class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 hover:bg-amber-200 flex items-center justify-center text-sm transition-all" title="給自己蓋章得星星！">
+                            <i class="fa-solid fa-star"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lesson Explanation / Interactive Learnings Card -->
+            <div class="bg-white rounded-3xl p-6 shadow-xl border-2 border-amber-100 flex-grow flex flex-col justify-between min-h-[220px]">
+                <div>
+                    <span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full">點選單句看看意思</span>
+                    <h4 class="text-lg font-bold text-amber-950 mt-2" id="explanation-title">生活智慧小站</h4>
+                    <div id="explanation-body" class="text-sm text-slate-600 mt-2 leading-relaxed whitespace-pre-line">
+                        歡迎來到感恩朗讀亭！你可以點擊左邊的《憫農詩》或《午餐感謝詞》任一句子，這裡會顯示溫暖、可愛的白話文解釋與生活哲理喔！
+
+                        點選「整篇朗讀」可以聽聽看標準的發音，接著點擊綠色區塊的麥克風錄製自己朗讀的聲音，給自己蓋一個榮譽星星吧！
+                    </div>
+                </div>
+
+                <!-- Reward Stars Track -->
+                <div class="border-t border-slate-100 pt-4 mt-4 flex items-center justify-between">
+                    <span class="text-xs font-extrabold text-slate-500">我的學習金稻穗：</span>
+                    <div id="star-rack" class="flex gap-1.5 text-lg text-slate-200">
+                        <i class="fa-solid fa-star transition-all duration-500"></i>
+                        <i class="fa-solid fa-star transition-all duration-500"></i>
+                        <i class="fa-solid fa-star transition-all duration-500"></i>
+                        <i class="fa-solid fa-star transition-all duration-500"></i>
+                        <i class="fa-solid fa-star transition-all duration-500"></i>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- API Config Modal -->
+    <div id="api-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 transform transition-all">
+            <div class="flex justify-between items-center pb-4 border-b border-slate-100">
+                <h3 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
+                    AI 語音大師設定
+                </h3>
+                <button onclick="toggleApiModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <div class="py-4 space-y-4">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    本網站預設會使用系統語音或免金鑰的串接。如果您想體驗最自然的 **Gemini 2.5 AI 擬真配音**（支援豐富的情感語調與完美的中文節奏），可以在下方設定您的 Gemini API Key：
+                </p>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Gemini API Key：</label>
+                    <input type="password" id="input-api-key" placeholder="請貼上您的 AIzaSy... 金鑰" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                    <p class="text-[10px] text-slate-400 mt-1">金鑰僅存於您本機瀏覽器內，不會上傳至任何第三方伺服器。</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">AI 老師聲線（Gemini TTS）：</label>
+                    <select id="select-voice-name" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                        <option value="Erinome" selected>Erinome (乾淨透亮、娓娓道來)</option>
+                        <option value="Sadachbia">Sadachbia (生動活潑、元氣滿滿)</option>
+                        <option value="Kore">Kore (端莊穩重、字字清晰)</option>
+                        <option value="Zephyr">Zephyr (陽光溫柔、和藹可親)</option>
+                        <option value="Puck">Puck (輕快好聽、活潑俏皮)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex justify-end gap-2">
+                <button onclick="clearApiKey()" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 rounded-lg">清空設定</button>
+                <button onclick="saveApiConfig()" class="px-5 py-2.5 text-xs font-bold bg-amber-500 text-white hover:bg-amber-600 rounded-xl shadow">儲存設定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Friendly toast notifications -->
+    <div id="toast-box" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3">
+            <span id="toast-icon" class="text-amber-400">💡</span>
+            <p id="toast-message" class="text-sm font-bold"></p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full text-center py-6 text-xs text-amber-800/60 font-semibold bg-[#f5ebd6]/40 mt-8 border-t border-amber-200/20">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p>🌾 粒粒皆辛苦，餐餐要珍惜。用心咀嚼，感謝農夫的辛勞付出。</p>
+            <p>© 2026 小小農夫感謝亭 · 開心吃飽飽教育平台</p>
+        </div>
+    </footer>
+
+    <script>
+        // Data Structures for the Two Reading Modes
+        const CONTENT_DATA = {
+            poem: {
+                tag: "經典古詩朗讀",
+                title: "憫農詩",
+                author: "唐代 · 李紳",
+                mascot: "🌾",
+                sentences: [
+                    {
+                        text: "鋤禾日當午",
+                        pinyin: "chú hé rì dāng wǔ",
+                        bopomofo: "ㄔㄨˊ ㄏㄜˊ ㄖˋ ㄉㄤ ㄨˇ",
+                        explain: "【☀️ 鋤禾日當午】\n除草、鬆土叫做「鋤禾」。\n這句話描寫在中午大太陽、最炎熱的時候，農夫伯伯依舊彎著腰，揮汗如雨地在田地裡，拿著鋤頭辛苦地除草、照顧小禾苗。",
+                        interactiveImg: "☀️"
+                    },
+                    {
+                        text: "汗滴禾下土",
+                        pinyin: "hàn dī hé xià tǔ",
+                        bopomofo: "ㄏㄢˋ ㄉㄧ ㄏㄜˊ ㄒㄧㄚˋ ㄊㄨˇ",
+                        explain: "【💧 汗滴禾下土】\n天氣實在太炎熱了，農夫伯伯身上的汗水，像雨滴一樣，一滴一滴不停地掉落到泥土裡、滋潤著小禾苗。\n每一口白米飯，都是農夫的汗水結晶喔！",
+                        interactiveImg: "💦"
+                    },
+                    {
+                        text: "誰知盤中飧",
+                        pinyin: "shéi zhī pán zhōng sūn",
+                        bopomofo: "ㄕㄟˊ ㄓ ㄆㄢˊ ㄓㄨㄥ ㄙㄨㄣ",
+                        explain: "【🍚 誰知盤中飧】\n「盤中飧（ㄙㄨㄣ）」指的是我們每天碗裡、盤子裡的飯食與美味午餐。\n有誰能夠體會，我們平常筷子夾起的、大口大口吃下的米飯和青菜……",
+                        interactiveImg: "🍚"
+                    },
+                    {
+                        text: "粒粒皆辛苦",
+                        pinyin: "lì lì jiē xīn kǔ",
+                        bopomofo: "ㄌㄧˋ ㄌㄧˋ ㄐㄧㄝ ㄒㄧㄣ ㄎㄨˇ",
+                        explain: "【🌾 粒粒皆辛苦】\n這裡面的「每一粒」米飯、每一口食物，全都是農夫們不畏嚴寒與酷暑，辛辛苦苦耕作而得來的。\n所以我們一口都不能浪費，要把飯菜吃個精光喔！",
+                        interactiveImg: "❤️"
+                    }
+                ],
+                generalExplain: "《憫農詩》描繪了在炎炎烈日之下，農夫辛勤勞作的艱苦場景。李紳希望藉由這首詩，提醒人們每一粒糧食都飽含著勞動者的血汗與艱辛，我們必須心懷敬意，絕不能隨意浪費食物。"
+            },
+            gratitude: {
+                tag: "學校午餐感恩詞",
+                title: "午餐感謝詞",
+                author: "校園餐前禮儀",
+                mascot: "🍱",
+                sentences: [
+                    {
+                        text: "感謝天地，恩賜陽光與雨露。",
+                        pinyin: "gǎn xiè tiān dì, ēn cì yáng guāng yǔ yǔ lù",
+                        bopomofo: "ㄍㄢˇ ㄒㄧㄝˋ ㄊㄧㄢ ㄉㄧˋ， ㄣ ㄙˋ ㄧㄤˊ ㄍㄨㄤ ㄩˇ ㄩˇ ㄌㄨˋ",
+                        explain: "【☀️ 感謝天地】\n謝謝大自然賜予我們溫暖的陽光和滋潤的雨水，讓大地上的稻穀、蔬菜和水果能夠健康強壯地長大。",
+                        interactiveImg: "⛅"
+                    },
+                    {
+                        text: "感謝農夫，辛勤耕耘與付出。",
+                        pinyin: "gǎn xiè nóng fū, xīn qín gēng yún yǔ fù chū",
+                        bopomofo: "ㄍㄢˇ ㄒㄧㄝˋ ㄋㄨㄥˊ ㄈㄨ， ㄒㄧㄣ ㄑㄧㄣˊ ㄍㄥ ㄩㄣˊ ㄩˇ ㄈㄨˋ ㄔㄨ",
+                        explain: "【🧑‍🌾 感謝農夫】\n謝謝辛苦的農夫伯伯、阿姨們，無論颳風下雨都在田裡忙碌，細心照顧莊稼，讓我們有安全、營養的米飯與蔬菜可以吃。",
+                        interactiveImg: "👨‍🌾"
+                    },
+                    {
+                        text: "感謝廚師，用心調配好美味。",
+                        pinyin: "gǎn xiè chú shī, yòng xīn tiáo pèi hǎo měi wèi",
+                        bopomofo: "ㄍㄢˇ ㄒㄧㄝˋ ㄔㄨˊ ㄕ， ㄩㄥˋ ㄒㄧㄣ ㄊㄧㄠˊ ㄆㄟˋ ㄏㄠˇ ㄇㄟˇ ㄨㄟˋ",
+                        explain: "【🍳 感謝廚師】\n謝謝廚房的廚工媽媽與師傅們，在熱呼呼的廚房裡用心烹調、幫我們把食物做成美味又健康的午餐，讓我們長得高又壯！",
+                        interactiveImg: "🍳"
+                    },
+                    {
+                        text: "感謝老師，陪伴我們每一天。",
+                        pinyin: "gǎn xiè lǎo shī, péi bàn wǒ men měi yī tiān",
+                        bopomofo: "ㄍㄢˇ ㄒㄧㄝˋ ㄌㄠˇ ㄕ， ㄆㄟˊ ㄅㄢˋ ㄨㄛˇ ㄇㄣ˙ ㄇㄟˇ ㄧ ㄊㄧㄢ",
+                        explain: "【👩‍🏫 感謝老師】\n謝謝班導師與所有老師，每天守護我們的安全，帶領我們盛飯、教導我們良好的用餐禮儀與餐後清潔習慣。",
+                        interactiveImg: "👩‍🏫"
+                    },
+                    {
+                        text: "粒粒皆辛苦，餐餐要珍惜。",
+                        pinyin: "lì lì jiē xīn kǔ, cān cān yào zhēn xī",
+                        bopomofo: "ㄌㄧˋ ㄌㄧˋ ㄐㄧㄝ ㄒㄧㄣ ㄎㄨˇ， ㄘㄢ ㄘㄢ ㄧㄠˋ ㄓㄣ ㄒㄧˊ",
+                        explain: "【❤️ 珍惜糧食】\n所有的食物都得來不易，是許多人一起努力的成果。\n我們要懷抱著感恩的心，不挑食、不浪費，每一餐都吃乾淨！",
+                        interactiveImg: "💖"
+                    },
+                    {
+                        text: "大家——請開動！",
+                        pinyin: "dà jiā —— qǐng kāi dòng!",
+                        bopomofo: "ㄉㄚˋ ㄐㄧㄚ ㄑㄧㄥˇ ㄎㄞ ㄉㄨㄥˋ！",
+                        explain: "【🎉 請開動！】\n大家一起大聲說「請開動！」，高高興興、開開心心地享受這份充滿愛與溫暖的午餐吧！",
+                        interactiveImg: "😋"
+                    }
+                ],
+                generalExplain: "午餐感謝詞是一段培養孩子良好飲食與感恩素養的儀式性朗讀。透過簡短流暢、字句充滿韻律的感謝文，引導孩子向大自然、農耕者、餐飲工作者和身旁陪伴者致謝，在日常進餐中深植惜食與體貼他人的心靈價值。"
+            }
+        };
+
+        // Application State
+        let currentMode = 'poem'; // 'poem' or 'gratitude'
+        let showPinyin = true;
+        let showDetailExplain = false;
+        let starCount = 0;
+        let highlightedIndex = -1;
+
+        // Audio Playback State Variables
+        let audioElements = []; // Stores the current list of playing sources
+        let currentAudioIndex = 0;
+        let isPlayingAll = false;
+
+        // Voice Recorder State Variables
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let recordedAudioUrl = null;
+        let recordTimerInterval = null;
+        let recordSeconds = 0;
+        let audioCtx = null;
+        let analyser = null;
+        let animationFrameId = null;
+
+        // Initialize App on Window Load
+        window.onload = function () {
+            // Load Saved API Config if any
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) {
+                document.getElementById('input-api-key').value = savedKey;
+            }
+            const savedVoice = localStorage.getItem('gemini_voice_name');
+            if (savedVoice) {
+                document.getElementById('select-voice-name').value = savedVoice;
+            }
+
+            // Load saved stars
+            const savedStars = parseInt(localStorage.getItem('student_stars') || '0');
+            starCount = Math.min(5, savedStars);
+            updateStarRackUI();
+
+            // Set up UI components
+            switchMode('poem');
+            detectAudioCapability();
+            setupVoiceWaveform();
+        };
+
+        function switchMode(mode) {
+            stopAllAudio();
+            currentMode = mode;
+            highlightedIndex = -1;
+
+            const data = CONTENT_DATA[mode];
+
+            // Update UI Toggles Highlight
+            if (mode === 'poem') {
+                document.getElementById('btn-poem').className = "px-5 py-2.5 rounded-full font-bold shadow-md transition-all duration-300 transform hover:-translate-y-0.5 bg-amber-500 text-white border-2 border-amber-600";
+                document.getElementById('btn-gratitude').className = "px-5 py-2.5 rounded-full font-bold shadow-md transition-all duration-300 transform hover:-translate-y-0.5 bg-white text-amber-800 hover:bg-amber-100/50 border-2 border-amber-200";
+            } else {
+                document.getElementById('btn-gratitude').className = "px-5 py-2.5 rounded-full font-bold shadow-md transition-all duration-300 transform hover:-translate-y-0.5 bg-amber-500 text-white border-2 border-amber-600";
+                document.getElementById('btn-poem').className = "px-5 py-2.5 rounded-full font-bold shadow-md transition-all duration-300 transform hover:-translate-y-0.5 bg-white text-amber-800 hover:bg-amber-100/50 border-2 border-amber-200";
+            }
+
+            // Update Static Meta Details
+            document.getElementById('content-tag').innerText = data.tag;
+            document.getElementById('main-title').innerText = data.title;
+            document.getElementById('main-author').innerText = data.author;
+            document.getElementById('mascot-face').innerText = data.mascot;
+
+            // Render Reading Lines
+            const linesContainer = document.getElementById('reading-lines-container');
+            linesContainer.innerHTML = '';
+
+            data.sentences.forEach((sentence, idx) => {
+                const lineDiv = document.createElement('div');
+                lineDiv.id = `sentence-row-${idx}`;
+                lineDiv.className = `p-4 rounded-2xl border-2 border-slate-100/80 bg-slate-50/40 hover:bg-amber-50/60 hover:border-amber-300 cursor-pointer transition-all flex flex-col items-center justify-center text-center relative group select-none`;
+                lineDiv.onclick = () => selectSentence(idx);
+
+                // Add small touch indicators
+                const touchIcon = document.createElement('div');
+                touchIcon.className = "absolute right-3 top-3 opacity-0 group-hover:opacity-100 text-amber-400 text-xs transition-opacity flex items-center gap-1";
+                touchIcon.innerHTML = `<span class="text-[10px] font-bold">點擊點播</span> <i class="fa-solid fa-volume-low"></i>`;
+                lineDiv.appendChild(touchIcon);
+
+                // Word Box
+                const textBox = document.createElement('p');
+                textBox.className = "text-xl sm:text-2xl font-black text-slate-800 tracking-wider flex justify-center flex-wrap gap-x-2";
+                
+                // Text structure
+                textBox.innerText = sentence.text;
+                lineDiv.appendChild(textBox);
+
+                // Phonetic Box
+                const phoneticBox = document.createElement('p');
+                phoneticBox.id = `phonetic-${idx}`;
+                phoneticBox.className = `text-xs text-amber-700/80 mt-1.5 font-bold tracking-wide select-none ${showPinyin ? '' : 'hidden'}`;
+                phoneticBox.innerText = sentence.bopomofo; // Default Bopomofo for Taiwanese educational focus
+                lineDiv.appendChild(phoneticBox);
+
+                // Small mini-explain toggle inline
+                const inlineExplain = document.createElement('p');
+                inlineExplain.id = `inline-explain-${idx}`;
+                inlineExplain.className = `text-xs text-slate-500 mt-2 italic max-w-md ${showDetailExplain ? '' : 'hidden'}`;
+                inlineExplain.innerText = sentence.explain.split('\n').slice(1).join(' '); // Just body
+                lineDiv.appendChild(inlineExplain);
+
+                linesContainer.appendChild(lineDiv);
+            });
+
+            // Set Explanation Panel to default state
+            document.getElementById('explanation-title').innerText = "小幫手提示";
+            document.getElementById('explanation-body').innerText = data.generalExplain;
+        }
+
+        // Sentence Specific Click Action
+        function selectSentence(index) {
+            highlightedIndex = index;
+            const data = CONTENT_DATA[currentMode];
+            const sentenceObj = data.sentences[index];
+
+            // Render to Explanation Panel
+            document.getElementById('explanation-title').innerText = `句子詳解 ${sentenceObj.interactiveImg}`;
+            document.getElementById('explanation-body').innerText = sentenceObj.explain;
+
+            // Highlight in view
+            clearSentenceHighlights();
+            const row = document.getElementById(`sentence-row-${index}`);
+            if (row) {
+                row.classList.add('active-sentence');
+            }
+
+            // Play single sentence sound
+            playSingleSentenceTTS(sentenceObj.text);
+        }
+
+        function clearSentenceHighlights() {
+            const data = CONTENT_DATA[currentMode];
+            data.sentences.forEach((_, idx) => {
+                const row = document.getElementById(`sentence-row-${idx}`);
+                if (row) {
+                    row.classList.remove('active-sentence');
+                }
+            });
+        }
+
+        function togglePinyin() {
+            showPinyin = !showPinyin;
+            const data = CONTENT_DATA[currentMode];
+            
+            data.sentences.forEach((_, idx) => {
+                const bopomofoEl = document.getElementById(`phonetic-${idx}`);
+                if (bopomofoEl) {
+                    if (showPinyin) {
+                        bopomofoEl.classList.remove('hidden');
+                    } else {
+                        bopomofoEl.classList.add('hidden');
+                    }
+                }
+            });
+
+            const btn = document.getElementById('btn-pinyin-toggle');
+            if (showPinyin) {
+                btn.className = "px-3 py-1 text-xs font-bold rounded-lg border border-amber-300 text-amber-800 bg-amber-100 hover:bg-amber-200";
+                showToast("💡 已經開啟注音輔助標記！", "info");
+            } else {
+                btn.className = "px-3 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50";
+                showToast("💡 已經隱藏注音輔助！", "info");
+            }
+        }
+
+        function toggleExplainMode() {
+            showDetailExplain = !showDetailExplain;
+            const data = CONTENT_DATA[currentMode];
+
+            data.sentences.forEach((_, idx) => {
+                const explainEl = document.getElementById(`inline-explain-${idx}`);
+                if (explainEl) {
+                    if (showDetailExplain) {
+                        explainEl.classList.remove('hidden');
+                    } else {
+                        explainEl.classList.add('hidden');
+                    }
+                }
+            });
+
+            const btn = document.getElementById('btn-explain-toggle');
+            if (showDetailExplain) {
+                btn.className = "px-3 py-1 text-xs font-bold rounded-lg border border-amber-300 text-amber-800 bg-amber-100 hover:bg-amber-200";
+                showToast("💡 開啟行間白話詳細解釋！", "info");
+            } else {
+                btn.className = "px-3 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50";
+                showToast("💡 隱藏行間詳細解釋。", "info");
+            }
+        }
+
+        function getApiKey() {
+            return localStorage.getItem('gemini_api_key') || "";
+        }
+
+        function getVoiceConfig() {
+            return localStorage.getItem('gemini_voice_name') || "Erinome";
+        }
+
+        function detectAudioCapability() {
+            const key = getApiKey();
+            const voiceIndicator = document.getElementById('voice-indicator');
+            if (key) {
+                voiceIndicator.innerText = `AI 老師 (${getVoiceConfig()}) 準備就緒`;
+            } else {
+                voiceIndicator.innerText = "內建標準語音模式已啟用";
+            }
+        }
+
+        // Helper: Convert PCM16 array buffer into a playable WAV blob
+        function pcmToWav(pcm16Array, sampleRate) {
+            const buffer = new ArrayBuffer(44 + pcm16Array.length * 2);
+            const view = new DataView(buffer);
+
+            // "RIFF"
+            view.setUint8(0, 82); // R
+            view.setUint8(1, 73); // I
+            view.setUint8(2, 70); // F
+            view.setUint8(3, 70); // F
+            
+            // Filesize (36 + data size)
+            view.setUint32(4, 36 + pcm16Array.length * 2, true);
+            
+            // "WAVE"
+            view.setUint8(8, 87);  // W
+            view.setUint8(9, 65);  // A
+            view.setUint8(10, 86); // V
+            view.setUint8(11, 69); // E
+            
+            // "fmt " chunk
+            view.setUint8(12, 102); // f
+            view.setUint8(13, 109); // m
+            view.setUint8(14, 116); // t
+            view.setUint8(15, 32);  // 
+            
+            view.setUint32(16, 16, true); // Chunk size (16)
+            view.setUint16(20, 1, true);  // Audio format (1 for PCM)
+            view.setUint16(22, 1, true);  // Channel count (1)
+            view.setUint32(24, sampleRate, true); // Sample rate
+            view.setUint32(28, sampleRate * 2, true); // Byte rate (sample rate * block align)
+            view.setUint16(32, 2, true);  // Block align (channel count * bytes per sample)
+            view.setUint16(34, 16, true); // Bits per sample (16)
+
+            // "data" chunk
+            view.setUint8(36, 100); // d
+            view.setUint8(37, 97);  // a
+            view.setUint8(38, 116); // t
+            view.setUint8(39, 97);  // a
+            
+            view.setUint32(40, pcm16Array.length * 2, true); // Data chunk length
+
+            // Write raw PCM 16 data
+            for (let i = 0; i < pcm16Array.length; i++) {
+                view.setInt16(44 + i * 2, pcm16Array[i], true);
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        async function fetchGeminiTTS(text, voiceName) {
+            const apiKey = getApiKey();
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+            
+            // High-quality children guiding recitation prompt
+            const prompt = `Say in a gentle, warm, clear, and extremely friendly standard Mandarin teacher's accent for a young kid to repeat after me: "${text}". Please read slowly and pause briefly between syllables.`;
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: voiceName }
+                        }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error("Gemini TTS API request failed");
+            }
+
+            const result = await response.json();
+            const part = result?.candidates?.[0]?.content?.parts?.[0];
+            const audioData = part?.inlineData?.data;
+            const mimeType = part?.inlineData?.mimeType;
+
+            if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                let sampleRate = 24000; // default for Gemini L16
+                const matches = mimeType.match(/rate=(\d+)/);
+                if (matches && matches[1]) {
+                    sampleRate = parseInt(matches[1], 10);
+                }
+
+                const pcmBuffer = base64ToArrayBuffer(audioData);
+                const pcm16 = new Int16Array(pcmBuffer);
+                const wavBlob = pcmToWav(pcm16, sampleRate);
+                return URL.createObjectURL(wavBlob);
+            } else {
+                throw new Error("Did not receive audio data in response");
+            }
+        }
+
+        // Native Browser Voice Fallback (Web Speech API)
+        function playNativeSpeech(text, onEndCallback = null) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop anything running
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                // Pick an optimal Chinese voice
+                const voices = window.speechSynthesis.getVoices();
+                const chineseVoice = voices.find(v => v.lang.includes('zh-TW') || v.lang.includes('zh-HK') || v.lang.includes('zh-CN'));
+                if (chineseVoice) {
+                    utterance.voice = chineseVoice;
+                }
+
+                // Apply Kid-Friendly slow reading rate
+                const speedSelect = document.getElementById('select-speed');
+                utterance.rate = speedSelect ? parseFloat(speedSelect.value) * 0.85 : 0.8; // default slow
+                utterance.pitch = 1.1; // Friendly slightly higher pitch for kids
+
+                if (onEndCallback) {
+                    utterance.onend = onEndCallback;
+                    utterance.onerror = onEndCallback;
+                }
+
+                window.speechSynthesis.speak(utterance);
+            } else {
+                showToast("⚠️ 您的瀏覽器不支援語音合成功能。", "error");
+                if (onEndCallback) onEndCallback();
+            }
+        }
+
+        // Play Single Selected Sentence
+        async function playSingleSentenceTTS(text) {
+            const key = getApiKey();
+            const voice = getVoiceConfig();
+
+            stopAllAudio();
+
+            if (!key) {
+                // Seamless Web Speech API fallback
+                playNativeSpeech(text);
+                return;
+            }
+
+            try {
+                showToast("🎙️ 正在產生 AI 教師精美配音...", "info");
+                const audioUrl = await fetchWithBackoff(() => fetchGeminiTTS(text, voice));
+                const audio = new Audio(audioUrl);
+                
+                // Set play speed
+                const speedSelect = document.getElementById('select-speed');
+                if (speedSelect) {
+                    audio.playbackRate = parseFloat(speedSelect.value);
+                }
+
+                audioElements.push(audio);
+                audio.play();
+            } catch (e) {
+                console.warn("Gemini TTS Failed, falling back to System Speech:", e);
+                showToast("🌐 AI 忙碌中，已切換至系統內建語音發音。", "info");
+                playNativeSpeech(text);
+            }
+        }
+
+        async function playFullText() {
+            if (isPlayingAll) {
+                stopAllAudio();
+                return;
+            }
+
+            isPlayingAll = true;
+            currentAudioIndex = 0;
+            updatePlayAllButtonUI(true);
+
+            const data = CONTENT_DATA[currentMode];
+            
+            async function playNext() {
+                if (!isPlayingAll || currentAudioIndex >= data.sentences.length) {
+                    finishPlayingAll();
+                    return;
+                }
+
+                // Highlight target line
+                selectSentenceHighlightOnly(currentAudioIndex);
+                const sentenceObj = data.sentences[currentAudioIndex];
+                const key = getApiKey();
+                const voice = getVoiceConfig();
+
+                if (!key) {
+                    // Standard speech synthesis playback chain
+                    playNativeSpeech(sentenceObj.text, () => {
+                        currentAudioIndex++;
+                        // Pause briefly for students to swallow
+                        setTimeout(playNext, 600);
+                    });
+                } else {
+                    // Play via Gemini Cloud TTS
+                    try {
+                        const audioUrl = await fetchWithBackoff(() => fetchGeminiTTS(sentenceObj.text, voice));
+                        const audio = new Audio(audioUrl);
+                        
+                        const speedSelect = document.getElementById('select-speed');
+                        if (speedSelect) {
+                            audio.playbackRate = parseFloat(speedSelect.value);
+                        }
+
+                        audioElements.push(audio);
+                        audio.onended = () => {
+                            currentAudioIndex++;
+                            setTimeout(playNext, 800); // Friendly pause gap
+                        };
+                        audio.onerror = () => {
+                            // Fallback inside chain
+                            playNativeSpeech(sentenceObj.text, () => {
+                                currentAudioIndex++;
+                                setTimeout(playNext, 600);
+                            });
+                        };
+                        audio.play();
+                    } catch (err) {
+                        // Fallback inside chain
+                        playNativeSpeech(sentenceObj.text, () => {
+                            currentAudioIndex++;
+                            setTimeout(playNext, 600);
+                        });
+                    }
+                }
+            }
+
+            playNext();
+        }
+
+        function selectSentenceHighlightOnly(index) {
+            clearSentenceHighlights();
+            const row = document.getElementById(`sentence-row-${index}`);
+            if (row) {
+                row.classList.add('active-sentence');
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            const sentenceObj = CONTENT_DATA[currentMode].sentences[index];
+            document.getElementById('explanation-title').innerText = `正在讀： ${sentenceObj.interactiveImg}`;
+            document.getElementById('explanation-body').innerText = sentenceObj.explain;
+        }
+
+        function finishPlayingAll() {
+            isPlayingAll = false;
+            updatePlayAllButtonUI(false);
+            clearSentenceHighlights();
+            
+            // Set summary view back
+            const data = CONTENT_DATA[currentMode];
+            document.getElementById('explanation-title').innerText = "生活智慧小站";
+            document.getElementById('explanation-body').innerText = data.generalExplain;
+        }
+
+        function stopAllAudio() {
+            // Stop speech synthesis
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            // Stop audio elements
+            audioElements.forEach(audio => {
+                audio.pause();
+                audio.currentTime = 0;
+            });
+            audioElements = [];
+            
+            if (isPlayingAll) {
+                finishPlayingAll();
+            }
+        }
+
+        function updatePlayAllButtonUI(playing) {
+            const btn = document.getElementById('btn-read-all');
+            const icon = document.getElementById('icon-read-all');
+            const label = document.getElementById('label-read-all');
+
+            if (playing) {
+                btn.className = "px-6 py-3 bg-red-500 hover:bg-red-600 active:scale-95 text-white font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-red-500/20 transition-all";
+                icon.className = "fa-solid fa-circle-pause";
+                label.innerText = "停止朗讀";
+            } else {
+                btn.className = "px-6 py-3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all";
+                icon.className = "fa-solid fa-play";
+                label.innerText = "整篇朗讀";
+            }
+        }
+
+        // Exponential Backoff Fetch Helper
+        async function fetchWithBackoff(fn, retries = 3, delay = 1000) {
+            try {
+                return await fn();
+            } catch (error) {
+                if (retries <= 0) throw error;
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return fetchWithBackoff(fn, retries - 1, delay * 2);
+            }
+        }
+
+        async function toggleRecording() {
+            if (isRecording) {
+                // Stop recording
+                stopRecording();
+            } else {
+                // Start recording
+                await startRecording();
+            }
+        }
+
+        async function startRecording() {
+            audioChunks = [];
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    recordedAudioUrl = URL.createObjectURL(audioBlob);
+                    
+                    // Enable Play Button
+                    const playBtn = document.getElementById('btn-play-recording');
+                    playBtn.disabled = false;
+                    playBtn.className = "px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs flex items-center gap-1 transition-all shadow shadow-emerald-500/25";
+
+                    const trophyBtn = document.getElementById('btn-save-trophy');
+                    trophyBtn.disabled = false;
+
+                    document.getElementById('record-status-label').innerText = "錄製完成！點擊播放";
+                    showToast("🎉 錄製好囉！快播給自己聽，點亮一顆金稻穗吧！", "success");
+                    stopMicStream(stream);
+                };
+
+                // Setup audio context analyzer for visual wave
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioCtx.createMediaStreamSource(stream);
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+
+                mediaRecorder.start();
+                isRecording = true;
+                
+                // Update UI state
+                document.getElementById('icon-record').className = "fa-solid fa-square text-lg text-white";
+                document.getElementById('btn-record').className = "w-12 h-12 rounded-full bg-slate-700 hover:bg-slate-800 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all animate-pulse";
+                document.getElementById('record-status-label').innerText = "正在認真錄音中...";
+                document.getElementById('mic-prompt').classList.add('hidden');
+
+                // Timer Start
+                recordSeconds = 0;
+                document.getElementById('record-timer').innerText = "00:00";
+                recordTimerInterval = setInterval(() => {
+                    recordSeconds++;
+                    const mins = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
+                    const secs = String(recordSeconds % 60).padStart(2, '0');
+                    document.getElementById('record-timer').innerText = `${mins}:${secs}`;
+                }, 1000);
+
+                drawVisualizer();
+
+            } catch (err) {
+                console.error("Microphone Access Blocked or Unusable:", err);
+                showToast("⚠️ 請開啟麥克風權限以錄製您朗讀的聲音喔！", "error");
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+
+                // Stop Timer
+                clearInterval(recordTimerInterval);
+                
+                // Reset Record Button Look
+                document.getElementById('icon-record').className = "fa-solid fa-microphone text-lg text-white";
+                document.getElementById('btn-record').className = "w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-500/20 active:scale-95 transition-all";
+                
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+            }
+        }
+
+        function stopMicStream(stream) {
+            stream.getTracks().forEach(track => track.stop());
+            if (audioCtx) {
+                audioCtx.close();
+            }
+        }
+
+        function playStudentRecording() {
+            if (recordedAudioUrl) {
+                stopAllAudio();
+                showToast("🔊 正在播放剛才的練習錄音...", "success");
+                const player = new Audio(recordedAudioUrl);
+                player.play();
+            }
+        }
+
+        function setupVoiceWaveform() {
+            const canvas = document.getElementById('voice-wave');
+            const ctx = canvas.getContext('2d');
+            // Make responsive width
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            
+            // Draw dummy idle wave
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "rgba(16, 185, 129, 0.2)";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+        }
+
+        function drawVisualizer() {
+            if (!analyser) return;
+
+            const canvas = document.getElementById('voice-wave');
+            const ctx = canvas.getContext('2d');
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function draw() {
+                if (!isRecording) return;
+                animationFrameId = requestAnimationFrame(draw);
+
+                analyser.getByteTimeDomainData(dataArray);
+
+                ctx.fillStyle = "rgba(240, 253, 250, 0.4)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = "rgb(16, 185, 129)"; // Beautiful emerald green matching panel
+                ctx.beginPath();
+
+                const sliceWidth = canvas.width * 1.0 / bufferLength;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * canvas.height / 2;
+
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+
+                    x += sliceWidth;
+                }
+
+                ctx.lineTo(canvas.width, canvas.height / 2);
+                ctx.stroke();
+            }
+
+            draw();
+        }
+
+        function awardStar() {
+            if (starCount >= 5) {
+                showToast("🏆 太厲害了！你的金稻穗星光滿滿！繼續保持不浪費的精神喔！", "success");
+                return;
+            }
+
+            starCount++;
+            localStorage.setItem('student_stars', starCount);
+            updateStarRackUI();
+            
+            // Launch cute confetti emoji
+            showToast("✨ 恭喜獲得 1 顆金稻穗星星！你讀得太好聽了！", "success");
+
+            // Disable button once awarded to prevent click spamming
+            const trophyBtn = document.getElementById('btn-save-trophy');
+            trophyBtn.disabled = true;
+            trophyBtn.className = "w-10 h-10 rounded-xl bg-slate-100 text-slate-300 flex items-center justify-center text-sm cursor-default";
+        }
+
+        function updateStarRackUI() {
+            const stars = document.querySelectorAll('#star-rack i');
+            stars.forEach((star, index) => {
+                if (index < starCount) {
+                    star.className = "fa-solid fa-star text-amber-400 transform scale-110";
+                } else {
+                    star.className = "fa-solid fa-star text-slate-200";
+                }
+            });
+        }
+
+        function toggleApiModal() {
+            const modal = document.getElementById('api-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function saveApiConfig() {
+            const key = document.getElementById('input-api-key').value.trim();
+            const voice = document.getElementById('select-voice-name').value;
+
+            localStorage.setItem('gemini_api_key', key);
+            localStorage.setItem('gemini_voice_name', voice);
+
+            toggleApiModal();
+            detectAudioCapability();
+            showToast("💾 設定已成功儲存！AI 老師會用新音色為您發音。", "success");
+        }
+
+        function clearApiKey() {
+            document.getElementById('input-api-key').value = "";
+            localStorage.removeItem('gemini_api_key');
+            detectAudioCapability();
+            toggleApiModal();
+            showToast("🧹 金鑰已清空，已轉回系統基本中文發音。", "info");
+        }
+
+        // Beautiful Toast Prompt Generator
+        function showToast(message, type = "info") {
+            const toast = document.getElementById('toast-box');
+            const msgEl = document.getElementById('toast-message');
+            const iconEl = document.getElementById('toast-icon');
+
+            msgEl.innerText = message;
+            if (type === "success") {
+                iconEl.innerText = "🌾";
+                toast.firstElementChild.className = "bg-emerald-800 text-emerald-50 px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-emerald-600";
+            } else if (type === "error") {
+                iconEl.innerText = "⚠️";
+                toast.firstElementChild.className = "bg-red-800 text-red-50 px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-red-600";
+            } else {
+                iconEl.innerText = "💡";
+                toast.firstElementChild.className = "bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3";
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
